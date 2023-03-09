@@ -7,9 +7,10 @@ using namespace std;
 class Card {
 public:
     Card(int num_, char suit_);
+    Card();
     int num;
     char suit;
-    bool operator==(const Card& card_2)
+    bool operator==(const Card& card_2) const
     {
         if (this->num == card_2.num && this->suit == card_2.suit)
         {
@@ -30,11 +31,18 @@ struct pointer_less
         }
 };
 
+Card::Card()
+{
+    num = 0;
+    suit = 'S';
+}
+
 Card::Card(int num_, char suit_)
 {
     num = num_;
     suit = suit_;
 }
+
 
 //Check if the hand is a flush
 bool isFlush(vector<Card>& hand)
@@ -516,52 +524,79 @@ int calculateRoyalties(vector<Card>& hand, vector<int> b_points, vector<int> m_p
 }
 
 // function to generate all possible combinations of cards
-void generateCombinations(vector<Card>& cards, vector<Card>& combination, vector<Card>& bestHand, int& bestRoyalties, vector<int> b_points, vector<int> m_points) {
+void generateCombinations(vector<Card>& cards, vector<Card>& combination, vector<Card>& bestHand, int& bestRoyalties, vector<int> b_points, vector<int> m_points, int& count, vector<vector<Card>>& seen) {
     // base case: combination size is 13
     if (combination.size() == 13) {
         // calculate royalties for combination
         int royalties = calculateRoyalties(combination, b_points, m_points);
+        
+        if (royalties == -1)
+        {
+            count = 8;
+        }
+        else if (royalties == -2)
+        {
+            count = 3;
+        }
         // check if royalties are better than current best
-        if (royalties > bestRoyalties) {
+        if (royalties > bestRoyalties)
+        {
             bestRoyalties = royalties;
             bestHand = combination;
-            for (int i = bestHand.size() - 1; i >= 0; i--)
-            {
-                cout << bestHand[i].num << bestHand[i].suit << " ";
-                if (i == 10 || i == 5)
-                {
-                    cout << endl;
-                }
-            }
-            cout << endl << bestRoyalties << endl;
         }
         return;
     }
     
     // iterate through all remaining cards
-    for (int i = 0; i < cards.size(); i++) {
+    for (int i = 0; i < cards.size(); i++)
+    {
+        if (count > 0)
+        {
+            count--;
+            return;
+        }
         // check if card is already in combination
-        if (find(combination.begin(), combination.end(), cards[i]) != combination.end()) {
+        if (find(combination.begin(), combination.end(), cards[i]) != combination.end())
+        {
             continue;
         }
         // add current card to combination
         combination.push_back(cards[i]);
         // generate combinations with remaining cards
-        
-        generateCombinations(cards, combination, bestHand, bestRoyalties, b_points, m_points);
-        // remove current card from combination
-        combination.pop_back();
+       if (combination.size() == 5)
+       {
+            vector<Card> copy(5);
+            partial_sort_copy(begin(combination), end(combination), begin(copy), end(copy), pointer_less());
+            
+            if (find(seen.begin(), seen.end(), copy) != seen.end())
+            {
+                combination.pop_back();
+            }
+            else
+            {
+                seen.push_back(copy);
+                generateCombinations(cards, combination, bestHand, bestRoyalties, b_points, m_points, count, seen);
+                // remove current card from combination
+                combination.pop_back();
+            }
+        }
+        else
+        {
+            generateCombinations(cards, combination, bestHand, bestRoyalties, b_points, m_points, count, seen);
+            // remove current card from combination
+            combination.pop_back();
+        }
     }
 }
 
 int main() {
     // create vector of cards (usually don't initialize this is just for testing)
-    vector<Card> card_set = {Card(10, 'S'), Card(11, 'S'), Card(12, 'S'), Card(13, 'S'), Card(14, 'S'), Card(8, 'S'), Card(8, 'D'), Card(8, 'C'), Card(10, 'S'), Card(10, 'C'), Card(7, 'C'), Card(7, 'H'), Card(7, 'D'), Card(12, 'H')};
-    //vector<Card> card_set;
+    //vector<Card> card_set = {Card(2, 'S'), Card(13, 'S'), Card(14, 'S'), Card(10, 'S'), Card(8, 'S'), Card(11, 'S'), Card(8, 'D'), Card(8, 'C'), Card(4, 'S'), Card(10, 'C'), Card(13, 'C'), Card(13, 'H'), Card(3, 'S'), Card(5, 'S')};
+    vector<Card> card_set;
     int num = 0;
     char suit;
     // Uncomment to put your own cards in
-    /*
+    
     bool again = true;
     char y_n;
     bool valid_input = false;
@@ -623,7 +658,7 @@ int main() {
             }
         }
         card_set.push_back(Card(num, suit));
-    } */
+    }
     
     
     //create vectors for the amount of points per row
@@ -657,16 +692,18 @@ int main() {
     vector<Card> bestHand;
     int bestRoyalties = 0;
     // generate all combinations of cards and calculate royalties
+    int count = 0;
     vector<Card> current;
-    generateCombinations(card_set, current, bestHand, bestRoyalties, b_points, m_points);
+    vector<vector<Card>> seen;
+    generateCombinations(card_set, current, bestHand, bestRoyalties, b_points, m_points, count, seen);
     
     for (int i = bestHand.size() - 1; i >= 0; i--)
     {
-        if (i == 10 || i == 4)
+        cout << bestHand[i].num << bestHand[i].suit << " ";
+        if (i == 10 || i == 5)
         {
             cout << endl;
         }
-        cout << bestHand[i].num << bestHand[i].suit << " ";
     }
     
     cout << endl << "Amount of Royalties: " << bestRoyalties << endl;

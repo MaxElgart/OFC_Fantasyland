@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cmath>
 
 using namespace std;
 
@@ -197,7 +198,7 @@ bool isTwoPair(vector<Card>& hand, int& high)
 {
     int count = 1;
     int pairCount = 0;
-    for(int i = 0; i < hand.size(); i++)
+    for(int i = 0; i < hand.size() - 1; i++)
     {
         if (hand[i].num == hand[i + 1].num)
         {
@@ -241,7 +242,7 @@ bool isPair(vector<Card>& hand, int& high)
 {
     int count = 1;
     int pairCount = 0;
-    for(int i = 0; i < hand.size(); i++)
+    for(int i = 0; i < hand.size() - 1; i++)
     {
         if (hand[i].num == hand[i + 1].num)
         {
@@ -339,9 +340,9 @@ int hand_type(vector<Card>& hand, int& high)
 }
 
 // function to calculate royalties for a given hand
-int calculateRoyalties(vector<Card>& hand, vector<int> b_points, vector<int> m_points) {
+double calculateRoyalties(vector<Card>& hand, vector<double> b_points, vector<double> m_points) {
     // initialize royalties to 0
-    int royalties = 0;
+    double royalties = 0;
     
     vector<Card> bottom;
     vector<Card> middle;
@@ -407,6 +408,7 @@ int calculateRoyalties(vector<Card>& hand, vector<int> b_points, vector<int> m_p
                     return -1;
                 }
             }
+            
             if (royalties == 0)
             {
                 // If we went through the whole loop without adding to royalties then we have the same hand and can add the royalties for both
@@ -432,6 +434,7 @@ int calculateRoyalties(vector<Card>& hand, vector<int> b_points, vector<int> m_p
     //To check the middle vs the top hand
     int t_high = 0;
     sort(top.begin(), top.end(), pointer_less());
+
     int t_strength = hand_type(top, t_high);
     
     if (m_strength < t_strength)
@@ -523,71 +526,312 @@ int calculateRoyalties(vector<Card>& hand, vector<int> b_points, vector<int> m_p
     return royalties;
 }
 
-// function to generate all possible combinations of cards
-void generateCombinations(vector<Card>& cards, vector<Card>& combination, vector<Card>& bestHand, int& bestRoyalties, vector<int> b_points, vector<int> m_points, int& count, vector<vector<Card>>& seen) {
-    // base case: combination size is 13
-    if (combination.size() == 13) {
-        // calculate royalties for combination
-        int royalties = calculateRoyalties(combination, b_points, m_points);
+int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Card>& bestHand, double& bestRoyalties, vector<double> b_points, vector<double> m_points)
+{
+    int n = iterable.size();
+    if (r > n) {
+        return 3;
+    }
+    vector<int> indices(r);
+    for(int i = 0; i < r; i++) {
+        indices[i] = i;
+    }
+
+    for(int i = 0; i < r; i++)
+    {
+        temp[i + 10] = iterable[indices[i]];
+    }
+    double royalties = calculateRoyalties(temp, b_points, m_points);
+    
+    if (royalties == -1)
+    {
+        return 1;
+    }
+    else if (royalties == -2)
+    {
+        return 2;
+    }
+    else if (royalties > bestRoyalties)
+    {
+        bestHand = temp;
+        bestRoyalties = royalties;
+    }
+    
+    
+    while(true) {
+        int i = r - 1;
+        for(; i >= 0; i--) {
+            if (indices[i] != i + n - r) {
+                break;
+            }
+        }
+        if(i == -1)
+        {
+            return 3;
+        }
+        indices[i] += 1;
+        for(int j = i + 1; j < r; j++)
+        {
+            indices[j] = indices[j-1] + 1;
+        }
+        for(int i = 0; i < r; i++)
+        {
+            temp[i + 10] = iterable[indices[i]];
+        }
+        
+        double royalties = calculateRoyalties(temp, b_points, m_points);
         
         if (royalties == -1)
         {
-            count = 8;
+            return 1;
         }
         else if (royalties == -2)
         {
-            count = 3;
+            return 2;
         }
-        // check if royalties are better than current best
-        if (royalties > bestRoyalties)
+        else if (royalties > bestRoyalties)
         {
+            bestHand = temp;
             bestRoyalties = royalties;
-            bestHand = combination;
         }
+        else if (royalties == bestRoyalties)
+        {
+            //Do some sort of check looking for high cards
+            vector<Card> temp_top;
+            for (int i = 10; i < temp.size(); i++)
+            {
+                temp_top.push_back(temp[i]);
+            }
+            vector<Card> best_top = bestHand;
+            for (int i = 10; i < bestHand.size(); i++)
+            {
+                best_top.push_back(bestHand[i]);
+            }
+            int temp_high = 0;
+            int best_high = 0;
+            
+            int best_top_str = hand_type(best_top, best_high);
+            int temp_top_str = hand_type(temp_top, temp_high);
+            
+            if (best_top_str == temp_top_str && best_top_str == 9)
+            {
+                sort(iterable.begin(), iterable.end(), pointer_less());
+                for (int i = 0; i < best_top.size(); i++)
+                {
+                    if (iterable[i].num > best_top[i].num)
+                    {
+                        for (int i = 0; i < iterable.size() - 1; i++)
+                        {
+                            bestHand[i + 10] = iterable[i];
+                        }
+                        break;
+                    }
+                    else if (best_top[i].num > iterable[i].num)
+                    {
+                        break;
+                    }
+                }
+            }
+            else if (best_top_str == temp_top_str && best_top_str == 8)
+            {
+                if (temp_high == best_high)
+                {
+                    sort(iterable.begin(), iterable.end(), pointer_less());
+                    sort(bestHand.begin() + 10, bestHand.end(), pointer_less());
+                    for (int i = 0; i < iterable.size(); i++)
+                    {
+                        if (iterable[i].num != best_high && iterable[i].num > best_high)
+                        {
+                            bestHand[10] = iterable[i];
+                            break;
+                        }
+                        else if (iterable[i].num != best_high && iterable[i].num < best_high)
+                        {
+                            bestHand[13] = iterable[i];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+    }
+}
+
+void combinations_middle(vector<Card> iterable, vector<Card>& temp, int r, vector<Card>& bestHand, double& bestRoyalties, vector<double> b_points, vector<double> m_points)
+{
+    int n = iterable.size();
+    if (r > n) {
+        return;
+    }
+    vector<int> indices(r);
+    for(int i = 0; i < r; i++) {
+        indices[i] = i;
+    }
+
+    for(int i = 0; i < r; i++)
+    {
+        temp[i + 5] = iterable[indices[i]];
+    }
+    
+    bool check = false;
+    vector<Card> iterable_2;
+    for(int i = 0; i < iterable.size(); i++)
+    {
+        for (int j = 0; j < r; j++)
+        {
+            if (i == indices[j])
+            {
+                check = true;
+                break;
+            }
+        }
+        if (check)
+        {
+            check = false;
+            continue;
+        }
+        iterable_2.push_back(iterable[i]);
+    }
+    
+    if(combinations_top(iterable_2, temp, 3, bestHand, bestRoyalties, b_points, m_points) == 1)
+    {
         return;
     }
     
-    // iterate through all remaining cards
-    for (int i = 0; i < cards.size(); i++)
-    {
-        if (count > 0)
-        {
-            count--;
+
+    while(true) {
+        int i = r - 1;
+        for(; i >= 0; i--) {
+            if (indices[i] != i + n - r) {
+                break;
+            }
+        }
+        if(i == -1) {
             return;
         }
-        // check if card is already in combination
-        if (find(combination.begin(), combination.end(), cards[i]) != combination.end())
-        {
-            continue;
+        indices[i] += 1;
+        for(int j = i + 1; j < r; j++) {
+            indices[j] = indices[j-1] + 1;
         }
-        // add current card to combination
-        combination.push_back(cards[i]);
-        // generate combinations with remaining cards
-       if (combination.size() == 5)
-       {
-            vector<Card> copy(5);
-            partial_sort_copy(begin(combination), end(combination), begin(copy), end(copy), pointer_less());
-            
-            if (find(seen.begin(), seen.end(), copy) != seen.end())
-            {
-                combination.pop_back();
-            }
-            else
-            {
-                seen.push_back(copy);
-                generateCombinations(cards, combination, bestHand, bestRoyalties, b_points, m_points, count, seen);
-                // remove current card from combination
-                combination.pop_back();
-            }
-        }
-        else
+        
+        for(int i = 0; i < r; i++)
         {
-            generateCombinations(cards, combination, bestHand, bestRoyalties, b_points, m_points, count, seen);
-            // remove current card from combination
-            combination.pop_back();
+            temp[i + 5] = iterable[indices[i]];
+        }
+        
+        bool check = false;
+        iterable_2.clear();
+        for(int i = 0; i < iterable.size(); i++)
+        {
+            for (int j = 0; j < r; j++)
+            {
+                if (i == indices[j])
+                {
+                    check = true;
+                    break;
+                }
+            }
+            if (check)
+            {
+                check = false;
+                continue;
+            }
+            iterable_2.push_back(iterable[i]);
+        }
+        
+        if(combinations_top(iterable_2, temp, 3, bestHand, bestRoyalties, b_points, m_points) == 1)
+        {
+            return;
         }
     }
 }
+
+void combinations_bottom(vector<Card> iterable, vector<Card>& temp, int r, vector<Card>& bestHand, double& bestRoyalties, vector<double> b_points, vector<double> m_points)
+{
+    vector<vector<Card>> result;
+    int n = iterable.size();
+    if (r > n) {
+        return;
+    }
+    vector<int> indices(r);
+    for(int i = 0; i < r; i++) {
+        indices[i] = i;
+    }
+
+    for(int i = 0; i < r; i++)
+    {
+        temp[i] = iterable[indices[i]];
+    }
+    
+    bool check = false;
+    vector<Card> iterable_2;
+    for(int i = 0; i < iterable.size(); i++)
+    {
+        for (int j = 0; j < r; j++)
+        {
+            if (i == indices[j])
+            {
+                check = true;
+                break;
+            }
+        }
+        if (check)
+        {
+            check = false;
+            continue;
+        }
+        iterable_2.push_back(iterable[i]);
+    }
+    
+    combinations_middle(iterable_2, temp, 5, bestHand, bestRoyalties, b_points, m_points);
+
+    while(true) {
+        int i = r - 1;
+        for(; i >= 0; i--) {
+            if (indices[i] != i + n - r) {
+                break;
+            }
+        }
+        if(i == -1) {
+            return;
+        }
+        indices[i] += 1;
+        for(int j = i + 1; j < r; j++) {
+            indices[j] = indices[j-1] + 1;
+        }
+        
+        
+        for(int i = 0; i < r; i++)
+        {
+            temp[i] = iterable[indices[i]];
+        }
+        
+        bool check = false;
+        iterable_2.clear();
+        for(int i = 0; i < iterable.size(); i++)
+        {
+            for (int j = 0; j < r; j++)
+            {
+                if (i == indices[j])
+                {
+                    check = true;
+                    break;
+                }
+            }
+            if (check)
+            {
+                check = false;
+                continue;
+            }
+            iterable_2.push_back(iterable[i]);
+        }
+        
+        combinations_middle(iterable_2, temp, 5, bestHand, bestRoyalties, b_points, m_points);
+    }
+}
+
+
 
 int main() {
     // create vector of cards (usually don't initialize this is just for testing)
@@ -659,11 +903,12 @@ int main() {
         }
         card_set.push_back(Card(num, suit));
     }
-    
-    
+    vector<Card> bestHand(13);
+    double bestRoyalties = -1;
+    vector<Card> current(13);
     //create vectors for the amount of points per row
-    vector<int> b_points;
-    vector<int> m_points;
+    vector<double> b_points;
+    vector<double> m_points;
     
     b_points.push_back(25);
     b_points.push_back(15);
@@ -671,9 +916,9 @@ int main() {
     b_points.push_back(6);
     b_points.push_back(4);
     b_points.push_back(2);
-    for (int i = 0; i < 5; i++)
+    for (double i = 4; i >= 0; i--)
     {
-        b_points.push_back(0);
+        b_points.push_back(i/20);
     }
     
     m_points.push_back(50);
@@ -683,19 +928,12 @@ int main() {
     m_points.push_back(8);
     m_points.push_back(4);
     m_points.push_back(2);
-    for (int i = 0; i < 4; i++)
+    for (double i = 3; i >= 0; i--)
     {
-        m_points.push_back(0);
+        m_points.push_back(i/20);
     }
     
-    // create vector to store best hand and royalties
-    vector<Card> bestHand;
-    int bestRoyalties = 0;
-    // generate all combinations of cards and calculate royalties
-    int count = 0;
-    vector<Card> current;
-    vector<vector<Card>> seen;
-    generateCombinations(card_set, current, bestHand, bestRoyalties, b_points, m_points, count, seen);
+    combinations_bottom(card_set, current, 5, bestHand, bestRoyalties, b_points, m_points);
     
     for (int i = bestHand.size() - 1; i >= 0; i--)
     {
@@ -706,7 +944,9 @@ int main() {
         }
     }
     
-    cout << endl << "Amount of Royalties: " << bestRoyalties << endl;
+    int x = floor(bestRoyalties);
+    
+    cout << endl << "Amount of Royalties: " << x << endl;
     
     return 0;
 }

@@ -980,12 +980,11 @@ void combinations_bottom(vector<Card> iterable, vector<Card>& temp, int r, vecto
 
 int main() {
     // create vector of cards (usually don't initialize this is just for testing)
-    vector<Card> card_set = {Card(14, 'H'), Card(14, 'C'), Card(13, 'H'), Card(13, 'C'), Card(12, 'S'), Card(12, 'C'), Card(10, 'S'), Card(10, 'C'), Card(9, 'S'), Card(9, 'C'), Card(8, 'D'), Card(6, 'C'), Card(4, 'S'), Card(2, 'H')};
-    //vector<Card> card_set;
+    //vector<Card> card_set = {Card(14, 'H'), Card(14, 'C'), Card(13, 'H'), Card(13, 'C'), Card(12, 'S'), Card(12, 'C'), Card(10, 'S'), Card(10, 'C'), Card(9, 'S'), Card(9, 'C'), Card(8, 'D'), Card(6, 'C'), Card(4, 'S'), Card(2, 'H')};
+    vector<Card> card_set;
     int num = 0;
     char suit;
     // Uncomment to put your own cards in
-    /*
     bool again = true;
     char y_n;
     bool valid_input = false;
@@ -1047,7 +1046,7 @@ int main() {
             }
         }
         card_set.push_back(Card(num, suit));
-    }*/
+    }
     vector<Card> bestHand(13);
     double bestRoyalties = -1;
     vector<Card> current(13);

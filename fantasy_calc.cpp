@@ -607,15 +607,11 @@ int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Ca
         
         if (best_top_str == temp_top_str && best_top_str == 9)
         {
-            sort(iterable.begin(), iterable.end(), pointer_less());
             for (int i = 0; i < best_top.size(); i++)
             {
-                if (iterable[i].num > best_top[i].num)
+                if (temp_top[i].num > best_top[i].num)
                 {
-                    for (int i = 0; i < iterable.size() - 1; i++)
-                    {
-                        bestHand[i + 10] = iterable[i];
-                    }
+                    bestHand = temp;
                     break;
                 }
                 else if (best_top[i].num > iterable[i].num)
@@ -734,15 +730,11 @@ int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Ca
 
             if (best_top_str == temp_top_str && best_top_str == 9)
             {
-                sort(iterable.begin(), iterable.end(), pointer_less());
                 for (int i = 0; i < best_top.size(); i++)
                 {
-                    if (iterable[i].num > best_top[i].num)
+                    if (temp_top[i].num > best_top[i].num)
                     {
-                        for (int i = 0; i < iterable.size() - 1; i++)
-                        {
-                            bestHand[i + 10] = iterable[i];
-                        }
+                        bestHand = temp;
                         break;
                     }
                     else if (best_top[i].num > iterable[i].num)
@@ -931,7 +923,8 @@ void combinations_bottom(vector<Card> iterable, vector<Card>& temp, int r, vecto
     
     combinations_middle(iterable_2, temp, 5, bestHand, bestRoyalties, b_points, m_points);
 
-    while(true) {
+    while(true)
+    {
         int i = r - 1;
         for(; i >= 0; i--) {
             if (indices[i] != i + n - r) {

@@ -364,6 +364,43 @@ int hand_type(vector<Card>& hand, int& high)
     }
 }
 
+bool isFantasy(vector<Card>& hand)
+{
+    int dummy = 0;
+    
+    vector<Card> top;
+    for (int i = 10; i < hand.size(); i++)
+    {
+        top.push_back(hand[i]);
+    }
+
+    sort(top.begin(), top.end(), pointer_less());
+    int temp_top_str = hand_type(top, dummy);
+    
+    if (temp_top_str == 6)
+    {
+        return true;
+    }
+    else
+    {
+        vector<Card> bottom;
+        for (int i = 0; i < 5; i++)
+        {
+            bottom.push_back(hand[i]);
+        }
+
+        sort(bottom.begin(), bottom.end(), pointer_less());
+        int temp_bot_str = hand_type(bottom, dummy);
+        
+        if (temp_bot_str <= 2)
+        {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 // function to calculate royalties for a given hand
 double calculateRoyalties(vector<Card>& hand, vector<double> b_points, vector<double> m_points) {
     // initialize royalties to 0
@@ -551,7 +588,7 @@ double calculateRoyalties(vector<Card>& hand, vector<double> b_points, vector<do
     return royalties;
 }
 
-int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Card>& bestHand, double& bestRoyalties, vector<double> b_points, vector<double> m_points)
+int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Card>& bestHand, double& bestRoyalties, vector<double> b_points, vector<double> m_points, vector<Card>& bestFantasy, double& bestFantRoyal)
 {
     int n = iterable.size();
     if (r > n)
@@ -570,6 +607,15 @@ int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Ca
     }
     double royalties = calculateRoyalties(temp, b_points, m_points);
     
+    if (royalties >= 10 && royalties > bestFantRoyal)
+    {
+        if (isFantasy(temp))
+        {
+            bestFantasy = temp;
+            bestFantRoyal = royalties;
+        }
+    }
+    
     if (royalties == -1)
     {
         return 1;
@@ -585,7 +631,6 @@ int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Ca
     }
     else if (royalties == bestRoyalties)
     {
-        //Do some sort of check looking for high cards
         vector<Card> temp_top;
         for (int i = 10; i < temp.size(); i++)
         {
@@ -693,6 +738,15 @@ int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Ca
         
         royalties = calculateRoyalties(temp, b_points, m_points);
         
+        if (royalties >= 10 && royalties > bestFantRoyal)
+        {
+            if (isFantasy(temp))
+            {
+                bestFantasy = temp;
+                bestFantRoyal = royalties;
+            }
+        }
+        
         if (royalties == -1)
         {
             return 1;
@@ -708,7 +762,6 @@ int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Ca
         }
         else if (royalties == bestRoyalties)
         {
-            //Do some sort of check looking for high cards
             vector<Card> temp_top;
             for (int i = 10; i < temp.size(); i++)
             {
@@ -790,11 +843,10 @@ int combinations_top(vector<Card> iterable, vector<Card>& temp, int r, vector<Ca
                 }
             }
         }
-        
     }
 }
 
-void combinations_middle(vector<Card> iterable, vector<Card>& temp, int r, vector<Card>& bestHand, double& bestRoyalties, vector<double> b_points, vector<double> m_points)
+void combinations_middle(vector<Card> iterable, vector<Card>& temp, int r, vector<Card>& bestHand, double& bestRoyalties, vector<double> b_points, vector<double> m_points, vector<Card>& bestFantasy, double& bestFantRoyal)
 {
     int n = iterable.size();
     if (r > n) {
@@ -830,7 +882,7 @@ void combinations_middle(vector<Card> iterable, vector<Card>& temp, int r, vecto
         iterable_2.push_back(iterable[i]);
     }
     
-    if(combinations_top(iterable_2, temp, 3, bestHand, bestRoyalties, b_points, m_points) == 1)
+    if(combinations_top(iterable_2, temp, 3, bestHand, bestRoyalties, b_points, m_points, bestFantasy, bestFantRoyal) == 1)
     {
         return;
     }
@@ -877,14 +929,14 @@ void combinations_middle(vector<Card> iterable, vector<Card>& temp, int r, vecto
             iterable_2.push_back(iterable[i]);
         }
         
-        if(combinations_top(iterable_2, temp, 3, bestHand, bestRoyalties, b_points, m_points) == 1)
+        if(combinations_top(iterable_2, temp, 3, bestHand, bestRoyalties, b_points, m_points, bestFantasy, bestFantRoyal) == 1)
         {
             return;
         }
     }
 }
 
-void combinations_bottom(vector<Card> iterable, vector<Card>& temp, int r, vector<Card>& bestHand, double& bestRoyalties, vector<double> b_points, vector<double> m_points)
+void combinations_bottom(vector<Card> iterable, vector<Card>& temp, int r, vector<Card>& bestHand, double& bestRoyalties, vector<double> b_points, vector<double> m_points, vector<Card>& bestFantasy, double& bestFantRoyal)
 {
     vector<vector<Card>> result;
     int n = iterable.size();
@@ -921,7 +973,7 @@ void combinations_bottom(vector<Card> iterable, vector<Card>& temp, int r, vecto
         iterable_2.push_back(iterable[i]);
     }
     
-    combinations_middle(iterable_2, temp, 5, bestHand, bestRoyalties, b_points, m_points);
+    combinations_middle(iterable_2, temp, 5, bestHand, bestRoyalties, b_points, m_points, bestFantasy, bestFantRoyal);
 
     while(true)
     {
@@ -965,7 +1017,7 @@ void combinations_bottom(vector<Card> iterable, vector<Card>& temp, int r, vecto
             iterable_2.push_back(iterable[i]);
         }
         
-        combinations_middle(iterable_2, temp, 5, bestHand, bestRoyalties, b_points, m_points);
+        combinations_middle(iterable_2, temp, 5, bestHand, bestRoyalties, b_points, m_points, bestFantasy, bestFantRoyal);
     }
 }
 
@@ -1043,6 +1095,8 @@ int main() {
     vector<Card> bestHand(13);
     double bestRoyalties = -1;
     vector<Card> current(13);
+    vector<Card> bestFantasy(13);
+    double bestFantRoyal = -1;
     //create vectors for the amount of points per row
     vector<double> b_points;
     vector<double> m_points;
@@ -1070,20 +1124,83 @@ int main() {
         m_points.push_back(i/20);
     }
     
-    combinations_bottom(card_set, current, 5, bestHand, bestRoyalties, b_points, m_points);
+    combinations_bottom(card_set, current, 5, bestHand, bestRoyalties, b_points, m_points, bestFantasy, bestFantRoyal);
     
-    for (int i = bestHand.size() - 1; i >= 0; i--)
+    bestRoyalties = floor(bestRoyalties);
+    bestFantRoyal = floor(bestFantRoyal);
+    
+    // add if statement for if bestFantRoyal != -1 then ask which hand they want
+    if (bestFantRoyal != -1 && bestFantRoyal != bestRoyalties)
     {
-        cout << bestHand[i].num << bestHand[i].suit << " ";
-        if (i == 10 || i == 5)
+        cout << "Would you like the hand with the best royalties (royalties: " << bestRoyalties << ") or the hand to keep you in fantasy (royalties: " << bestFantRoyal << ") or both? (r/f/b): ";
+        cin >> y_n;
+        
+        if (y_n == 'r')
         {
-            cout << endl;
+            for (int i = bestHand.size() - 1; i >= 0; i--)
+            {
+                cout << bestHand[i].num << bestHand[i].suit << " ";
+                if (i == 10 || i == 5)
+                {
+                    cout << endl;
+                }
+            }
+            
+            cout << endl << "Amount of Royalties: " << floor(bestRoyalties) << endl;
+        }
+        else if (y_n == 'f')
+        {
+            for (int i = bestFantasy.size() - 1; i >= 0; i--)
+            {
+                cout << bestFantasy[i].num << bestFantasy[i].suit << " ";
+                if (i == 10 || i == 5)
+                {
+                    cout << endl;
+                }
+            }
+            
+            cout << endl << "Amount of Royalties: " << floor(bestFantRoyal) << endl;
+        }
+        else
+        {
+            cout << "Best Hand:" << endl;
+            for (int i = bestHand.size() - 1; i >= 0; i--)
+            {
+                cout << bestHand[i].num << bestHand[i].suit << " ";
+                if (i == 10 || i == 5)
+                {
+                    cout << endl;
+                }
+            }
+            
+            cout << endl << "Amount of Royalties: " << floor(bestRoyalties) << endl;
+            
+            cout << "Fantasy Land Hand:" << endl;
+            for (int i = bestFantasy.size() - 1; i >= 0; i--)
+            {
+                cout << bestFantasy[i].num << bestFantasy[i].suit << " ";
+                if (i == 10 || i == 5)
+                {
+                    cout << endl;
+                }
+            }
+            
+            cout << endl << "Amount of Royalties: " << floor(bestFantRoyal) << endl;
         }
     }
-    
-    int x = floor(bestRoyalties);
-    
-    cout << endl << "Amount of Royalties: " << x << endl;
+    else
+    {
+        for (int i = bestHand.size() - 1; i >= 0; i--)
+        {
+            cout << bestHand[i].num << bestHand[i].suit << " ";
+            if (i == 10 || i == 5)
+            {
+                cout << endl;
+            }
+        }
+        
+        cout << endl << "Amount of Royalties: " << bestRoyalties << endl;
+    }
     
     return 0;
 }
